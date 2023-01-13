@@ -2,7 +2,7 @@
 
 namespace CONST {
     const double CUT_OFF = 1.71;
-    const double a0 = 3.615;
+    const double a0 = 4.085;
     const double A0 = 0.0855;
     const double Q = 2.278;
     const double P = 10.960;
@@ -19,4 +19,15 @@ namespace CONST {
     const double dimP = 11.604;
     const double dimQ = 2.286;
     const double dimr0 = 1.7727;
+    const double Ec = -2.960;
+    const double B = 1.08;
+    const double C11 = 1.32;
+    const double C12 = 0.97;
+    const double C44 = 0.51;
+    const double Esol = 0.63;
+    const double EinDim = -0.08;
+    const double EonDim = -0.69; 
+
+    const double dOrig[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    
 } // namespace CONST

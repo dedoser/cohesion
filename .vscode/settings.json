@@ -49,6 +49,8 @@
         "algorithm": "cpp",
         "stack": "cpp",
         "deque": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "forward_list": "cpp",
+        "random": "cpp"
     }
 }
