@@ -1,6 +1,7 @@
 #include <EnergyFun.hpp>
 #include <Const.hpp>
 #include <math.h>
+#include <iostream>
 
 Dot countDefformation(const Dot &data, const double d[9]) {
     Dot dot;
@@ -125,7 +126,7 @@ double countSolEnergy(const std::vector<Dot*> &data, const Parameters &params, c
                             continue;
                         }
                         if (dot0.isDim || dot1.isDim) {
-                            curER += (params.getA1() * (dist - r0) + params.getA0()) * exp(-params.getP() * (dist / r0 - 1));
+                            curER += (params.getA1() * (dist - r0) / r0 + params.getA0()) * exp(-params.getP() * (dist / r0 - 1));
                             curEB += pow(params.getKsi(), 2) * exp(-2 * params.getQ() * (dist / r0 - 1));
                         } else {
                             curER += params.getA0() * exp(-params.getP() * (dist / r0 - 1));
@@ -145,6 +146,131 @@ double countSurfEnergy(const std::vector<Dot*> &data, const Parameters &params, 
     double cutOff = CONST::CUT_OFF * params.getCubeSide();
     double a0 = params.getCubeSide();
     double r0 = a0 / sqrt(2);
+
+    #pragma omp parallel for reduction(+: sumE)
+    for (unsigned i = 0; i < data.size(); ++i) {
+        Dot dot0 = countDefformation(*data[i], d);
+        double curEB = 0;
+        double curER = 0;
+        #pragma omp parallel for reduction(+: curEB, curER)
+        for (unsigned j = 0; j < data.size(); ++j) {
+            for (int dx = -1; dx < 2; ++dx) {
+                for (int dy = -1; dy < 2; ++dy) {
+                    if (i == j && dx == 0 && dy == 0) {
+                        continue;
+                    }
+                    Dot dotBorder = borderCondition(*data[j], dx, dy, 0, a0);
+                    Dot dot1 = countDefformation(dotBorder, d);
+                    double dist = sqrt(
+                        pow(dot1.x - dot0.x, 2) + pow(dot1.y - dot0.y, 2) + pow(dot1.z - dot0.z, 2)
+                    );
+                    if (dist > cutOff) {
+                        continue;
+                    }
+                    if (dot1.isDim && dot0.isDim) {
+                        curER += (params.getA1()) * exp(-params.getP() * (dist / r0 - 1));
+                        curEB += pow(params.getKsi(), 2) * exp(-2 * params.getQ() * (dist / r0 - 1));
+                    } else if (dot1.isDim || dot0.isDim) {
+                        curER += (params.getA1() * (dist - r0) + params.getA0()) * exp(-params.getP() * (dist / r0 - 1));
+                        curEB += pow(params.getKsi(), 2) * exp(-2 * params.getQ() * (dist / r0 - 1));
+                    } else {
+                        curER += params.getA0() * exp(-params.getP() * (dist / r0 - 1));
+                        curEB += pow(params.getKsi(), 2) * exp(-2 * params.getQ() * (dist / r0 - 1));
+                    }
+                }
+            }
+        }
+        sumE += (-sqrt(curEB) + curER);
+    }
+    
+    return sumE;
+}
+
+double countTestEnergy(const std::vector<Dot*> &data, const Parameters &params, const double d[9]) {
+    double sumE = 0;
+    double a0 = params.getCubeSide();
+    double cutOff = CONST::CUT_OFF * a0;
+    double r0 = CONST::a0 / sqrt(2);
+
+    #pragma omp parallel for reduction(+: sumE)
+    for (unsigned i = 0; i < data.size(); ++i) {
+        Dot dot0 = countDefformation(*data[i], d);
+        double curEB = 0;
+        double curER = 0;
+        #pragma omp parallel for reduction(+: curEB, curER)
+        for (unsigned j = 0; j < data.size(); ++j) {
+            for (int dx = -1; dx < 2; ++dx) {
+                for (int dy = -1; dy < 2; ++dy) {
+                    for (int dz = -1; dz < 2; ++dz) {
+                        if (i == j && dx == 0 && dy == 0 && dz == 0) {
+                            continue;
+                        }
+                        Dot dotBorder = borderCondition(*data[j], dx, dy, dz, a0);
+                        Dot dot1 = countDefformation(dotBorder, d);
+                        double dist = sqrt(
+                            pow(dot1.x - dot0.x, 2) + pow(dot1.y - dot0.y, 2) + pow(dot1.z - dot0.z, 2)
+                        );
+                        if (dist > cutOff) {
+                            continue;
+                        }
+                        curER += params.getA0() * exp(-params.getP() * (dist / r0 - 1));
+                        curEB += pow(params.getKsi(), 2) * exp(-2 * params.getQ() * (dist / r0 - 1));
+                    }
+                }
+            }
+        }
+        sumE += (-sqrt(curEB) + curER);
+    }
+    return sumE;
+}
+
+double countTestSolEnergy(const std::vector<Dot*> &data, const Parameters &params, const double d[9], double a0) {
+    double sumE = 0;
+    // double a0 = params.getCubeSide();
+    double cutOff = CONST::CUT_OFF * a0;
+    double r0 = params.getCubeSide() / sqrt(2);
+
+    #pragma omp parallel for reduction(+: sumE)
+    for (unsigned i = 0; i < data.size(); ++i) {
+        Dot dot0 = countDefformation(*data[i], d);
+        double curEB = 0;
+        double curER = 0;
+        #pragma omp parallel for reduction(+: curEB, curER)
+        for (unsigned j = 0; j < data.size(); ++j) {
+            for (int dx = -1; dx < 2; ++dx) {
+                for (int dy = -1; dy < 2; ++dy) {
+                    for (int dz = -1; dz < 2; ++dz) {
+                        if (i == j && dx == 0 && dy == 0 && dz == 0) {
+                            continue;
+                        }
+                        Dot dotBorder = borderCondition(*data[j], dx, dy, dz, a0);
+                        Dot dot1 = countDefformation(dotBorder, d);
+                        double dist = sqrt(
+                            pow(dot1.x - dot0.x, 2) + pow(dot1.y - dot0.y, 2) + pow(dot1.z - dot0.z, 2)
+                        );
+                        if (dist > cutOff) {
+                            continue;
+                        }
+                        if (dot0.isDim || dot1.isDim) {
+                            curER += (params.getA1() * (dist - r0) / r0 + params.getA0()) * exp(-params.getP() * (dist / r0 - 1));
+                            curEB += pow(params.getKsi(), 2) * exp(-2 * params.getQ() * (dist / r0 - 1));
+                        } else {
+                            curER += params.getA0() * exp(-params.getP() * (dist / r0 - 1));
+                            curEB += pow(params.getKsi(), 2) * exp(-2 * params.getQ() * (dist / r0 - 1));
+                        }
+                    }
+                }
+            }
+        }
+        sumE += (-sqrt(curEB) + curER);
+    }
+    return sumE;
+}
+
+double countTestSurfEnergy(const std::vector<Dot*> &data, const Parameters &params, const double d[9], double a0) {
+    double sumE = 0;
+    double cutOff = CONST::CUT_OFF * params.getCubeSide();
+    double r0 = params.getCubeSide() / sqrt(2);
 
     #pragma omp parallel for reduction(+: sumE)
     for (unsigned i = 0; i < data.size(); ++i) {

@@ -12,9 +12,10 @@ private:
     Parameters ABParams;
     Parameters AAParams;
     double ref_coef = 1.0;
-    double compr_coef = 0.5;
-    double stretch_coef = 2.0;
+    double compr_coef = 1.0;
+    double stretch_coef = 0.5;
     double glob_compr_coef = 0.5;
+    void shrink(Parameters &x_c, Parameters &x_h, Parameters &x_l, const double &f_h, double (* error)(const Parameters &params));
 public:
     static double errorBB(const Parameters &params);
     static double errorAB(const Parameters &params);
@@ -24,4 +25,10 @@ public:
     void initAA();
     void step(double (* error)(const Parameters &params));
     void run();
+    const Parameters &getAAParams() const;
+    const Parameters &getABParams() const;
+    const Parameters &getBBParams() const;
+
+    void test() const;
+
 };
